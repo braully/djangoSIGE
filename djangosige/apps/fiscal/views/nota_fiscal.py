@@ -524,6 +524,7 @@ class ImportarNotaView(CustomView):
             except Exception as e:
                 messages.error(
                     request, 'O seguinte erro foi encontrado ao tentar ler o arquivo XML: ' + str(e))
+                raise e 
         else:
             messages.error(request, 'Arquivo XML não selecionado.')
 

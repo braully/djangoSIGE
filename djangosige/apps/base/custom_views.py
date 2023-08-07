@@ -3,7 +3,7 @@
 from django.views.generic import TemplateView, ListView, View
 from django.views.generic.edit import CreateView, UpdateView
 from django.views.generic.detail import DetailView
-
+from django.contrib import messages
 from django.shortcuts import redirect
 
 from djangosige.apps.base.views_mixins import CheckPermissionMixin, FormValidationMessageMixin
@@ -38,6 +38,7 @@ class CustomCreateView(CheckPermissionMixin, FormValidationMessageMixin, CreateV
         form = self.get_form(form_class)
         if form.is_valid():
             self.object = form.save()
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
             return redirect(self.success_url)
         return self.form_invalid(form)
 
@@ -71,5 +72,6 @@ class CustomUpdateView(CheckPermissionMixin, FormValidationMessageMixin, UpdateV
         form = form_class(request.POST, instance=self.object)
         if form.is_valid():
             self.object = form.save()
+            messages.success(self.request, self.get_success_message(form.cleaned_data))
             return redirect(self.success_url)
         return self.form_invalid(form)

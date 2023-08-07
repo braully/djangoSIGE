@@ -5,6 +5,7 @@ from .configs import DEFAULT_DATABASE_URL, DEFAULT_FROM_EMAIL, EMAIL_HOST, EMAIL
 
 APP_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 PROJECT_ROOT = os.path.abspath(os.path.dirname(APP_ROOT))
+DEFAULT_AUTO_FIELD='django.db.models.AutoField'
 
 
 # Quick-start development settings - unsuitable for production

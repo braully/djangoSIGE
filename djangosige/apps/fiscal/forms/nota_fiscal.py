@@ -51,6 +51,7 @@ class NotaFiscalForm(forms.ModelForm):
             'ind_pres': forms.Select(attrs={'class': 'form-control'}),
             'inf_ad_fisco': forms.Textarea(attrs={'class': 'form-control'}),
             'inf_cpl': forms.Textarea(attrs={'class': 'form-control'}),
+            'arquivo': forms.FileInput(attrs={'class': 'form-control'}),
         }
         labels = {
             'versao': _('Versão'),
@@ -70,6 +71,7 @@ class NotaFiscalForm(forms.ModelForm):
             'ind_pres': _('Tipo de atendimento'),
             'inf_ad_fisco': _('Informações Adicionais de Interesse do Fisco'),
             'inf_cpl': _('Informações Complementares de interesse do Contribuinte'),
+            'arquivo': 'Arquivo'
         }
 
         error_messages = {
