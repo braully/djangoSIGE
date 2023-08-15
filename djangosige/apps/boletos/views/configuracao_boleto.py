@@ -3,9 +3,9 @@
 from django.urls import reverse_lazy
 from django.urls import reverse
 from django.shortcuts import redirect
-from SGEO.apps.base.custom_views import CustomCreateView, CustomUpdateView
-from SGEO.apps.boletos.models import ConfiguracaoBoleto
-from SGEO.apps.boletos.forms import ConfiguracoesBoletoForm
+from djangosige.apps.base.custom_views import CustomCreateView, CustomUpdateView
+from djangosige.apps.boletos.models import ConfiguracaoBoleto
+from djangosige.apps.boletos.forms import ConfiguracoesBoletoForm
 
 
 class AdicionarConfiguracaoBoletoView(CustomCreateView):

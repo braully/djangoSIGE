@@ -345,8 +345,8 @@ class ProcessadorNotaFiscal(object):
 
         # Pagamento(NFC-e)
         if nota_obj.mod == '65':
-            nfe.infNFe.Pag.tPag.valor = nota_obj.venda.get_forma_pagamento()
-            nfe.infNFe.Pag.vPag.valor = nota_obj.venda.valor_total
+            nfe.infNFe.pag.tPag.valor = nota_obj.venda.get_forma_pagamento()
+            nfe.infNFe.pag.vPag.valor = nota_obj.venda.valor_total
 
         # Informacoes adicionais
         nfe.infNFe.infAdic.infAdFisco.valor = nota_obj.inf_ad_fisco

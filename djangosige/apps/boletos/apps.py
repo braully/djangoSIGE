@@ -4,4 +4,4 @@ from django.apps import AppConfig
 
 
 class BoletosConfig(AppConfig):
-    name = 'SGEO.apps.boletos'
+    name = 'djangosige.apps.boletos'

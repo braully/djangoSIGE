@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from SGEO.apps.vendas.models import ItensVenda, Pagamento
+from djangosige.apps.vendas.models import ItensVenda, Pagamento
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -536,7 +536,7 @@ class BandaFoot(ReportBand):
         self.elements.append(Line(top=1.5 * cm, bottom=1.5 *
                                   cm, left=0 * cm, right=19.4 * cm, stroke_width=0.3))
 
-        txt = Label(text='Gerado por SGEO ERP', top=1.5 * cm,
+        txt = Label(text='Gerado por djangosige ERP', top=1.5 * cm,
                     left=0 * cm, width=19.4 * cm, height=0.5 * cm)
         txt.style = {'fontName': REPORT_FONT_BOLD,
                      'fontSize': 8, 'alignment': TA_LEFT, 'leading': 8}

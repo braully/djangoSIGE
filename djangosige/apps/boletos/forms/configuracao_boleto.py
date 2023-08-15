@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from django import forms
-from django.utils.translation import ugettext_lazy as _
-from SGEO.apps.boletos.models import ConfiguracaoBoleto
+from djangosige.apps.boletos.models import ConfiguracaoBoleto
 
 
 class ConfiguracoesBoletoForm(forms.ModelForm):
@@ -12,10 +11,10 @@ class ConfiguracoesBoletoForm(forms.ModelForm):
                   'estado', 'cidade', 'bairro', 'logradouro',
                   'numero', 'complemento', 'instrucoes')
         labels = {
-            'banco': _('Banco'),
-            'agencia': _('Agência'),
-            'conta': _('Conta'),
-            'digito': _('Dígito'),
+            'banco': ('Banco'),
+            'agencia': ('Agência'),
+            'conta': ('Conta'),
+            'digito': ('Dígito'),
             'carteira': 'Carteira',
             'nome_razao_social': 'Nome / Razão Social',
             'cpf_cnpj': 'CPF/CNPJ',

@@ -2,7 +2,7 @@
 
 from django import forms
 
-from SGEO.apps.boletos.models import Boleto
+from djangosige.apps.boletos.models import Boleto
 
 
 class BoletoForm(forms.ModelForm):

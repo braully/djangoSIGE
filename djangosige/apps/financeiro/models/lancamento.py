@@ -23,6 +23,7 @@ STATUS_CONTA_ENTRADA_ESCOLHAS = (
 
 
 class Lancamento(models.Model):
+    data_emissao = models.DateField(null=True, blank=True)
     data_vencimento = models.DateField(null=True, blank=True)
     data_pagamento = models.DateField(null=True, blank=True)
     descricao = models.CharField(max_length=255)

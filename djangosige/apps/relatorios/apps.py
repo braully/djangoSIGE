@@ -4,4 +4,4 @@ from django.apps import AppConfig
 
 
 class RelatoriosConfig(AppConfig):
-    name = 'SGEO.apps.relatorios'
+    name = 'djangosige.apps.relatorios'

@@ -1,6 +1,6 @@
-from SGEO.apps.financeiro.models import Entrada, MovimentoCaixa
-from SGEO.apps.relatorios.tables import EntradasTable
-from SGEO.apps.base.custom_views import CustomListView
+from djangosige.apps.financeiro.models import Entrada, MovimentoCaixa
+from djangosige.apps.relatorios.tables import EntradasTable
+from djangosige.apps.base.custom_views import CustomListView
 from django_tables2.export.views import ExportMixin
 from django_tables2 import RequestConfig
 from django_tables2.export.export import TableExport

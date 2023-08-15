@@ -11,11 +11,11 @@ from django.http import HttpResponse
 from decimal import Decimal
 from datetime import datetime
 
-from SGEO.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView, \
+from djangosige.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView, \
     CustomTemplateView
 
-from SGEO.apps.boletos.forms import BoletoForm, ConfiguracoesBoletoForm
-from SGEO.apps.boletos.models import Boleto, ConfiguracaoBoleto
+from djangosige.apps.boletos.forms import BoletoForm, ConfiguracoesBoletoForm
+from djangosige.apps.boletos.models import Boleto, ConfiguracaoBoleto
 
 
 class AdicionarBoletoAvulsoView(CustomCreateView):

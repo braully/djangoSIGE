@@ -1,6 +1,6 @@
 import django_filters
-from SGEO.apps.financeiro.models import Entrada
-from SGEO.apps.cadastro.models import Cliente
+from djangosige.apps.financeiro.models import Entrada
+from djangosige.apps.cadastro.models import Cliente
 from django.db import models
 from django import forms
 

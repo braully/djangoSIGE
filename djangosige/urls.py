@@ -5,6 +5,8 @@ from django.contrib import admin
 from django.conf.urls.static import static
 from .configs.settings import DEBUG, MEDIA_ROOT, MEDIA_URL
 
+# admin.autodiscover()
+
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^', include('djangosige.apps.base.urls')),
@@ -15,6 +17,9 @@ urlpatterns = [
     url(r'^compras/', include('djangosige.apps.compras.urls')),
     url(r'^financeiro/', include('djangosige.apps.financeiro.urls')),
     url(r'^estoque/', include('djangosige.apps.estoque.urls')),
+    # novos
+    url(r'^boletos/', include('djangosige.apps.boletos.urls')),
+    url(r'^relatorios/', include('djangosige.apps.relatorios.urls')),
 ]
 
 if DEBUG is True:

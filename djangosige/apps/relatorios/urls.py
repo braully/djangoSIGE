@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from django.conf.urls import url
-from django_pdfkit import PDFView
+from django.urls import re_path as url, include
 from . import views
 
 app_name = 'relatorios'

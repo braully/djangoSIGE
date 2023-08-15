@@ -1,9 +1,9 @@
 # tutorial/tables.py
 import django_tables2 as tables
 from django_tables2_column_shifter.tables import ColumnShiftTable
-from SGEO.apps.cadastro.models import Cliente, Produto
-from SGEO.apps.financeiro.models import Entrada
-from SGEO.apps.vendas.models import PedidoVenda
+from djangosige.apps.cadastro.models import Cliente, Produto
+from djangosige.apps.financeiro.models import Entrada
+from djangosige.apps.vendas.models import PedidoVenda
 from django.db.models.functions import Length
 
 
