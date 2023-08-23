@@ -231,6 +231,33 @@
                             </li>
                         </ul>
                     </li>
+
+                    <li>
+                        <a href="javascript:void(0);" class="menu-toggle">
+                            <i class="material-icons">account_balance</i>
+                            <span>Boletos</span>
+                        </a>
+                        <ul class="ml-menu">
+                            <li>
+                                <a href="{% url 'boletos:listaboletosview' %}">
+                                    Consultar boletos
+                                </a>
+                            </li>
+
+                            <li>
+                                <a
+                                {% if configuracao_boletos %}
+                                 href="{% url 'boletos:editarconfiguracaoboletoview' configuracao_boletos.id %}"
+                                {% else %}
+                                href="{% url 'boletos:adicionarconfiguracaoboletoview' %}"
+                                 {% endif %}
+                                >
+                                    Configuração de boletos
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
                     <li>
                         <a href="javascript:void(0);" class="menu-toggle">
                             <i class="material-icons">&#xE8B0;</i>

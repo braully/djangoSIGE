@@ -12,12 +12,17 @@ urlpatterns = [
     # Lista todos lancamentos
     url(r'lancamentos/$', views.LancamentoListView.as_view(),
         name='listalancamentoview'),
+    url(r'lancamentos/importar/$',
+        views.ImportarLancamentoView.as_view(), name='importarlancamentoview'),
 
     # Contas a pagar
     # financeiro/contapagar/adicionar/
     url(r'contapagar/adicionar/$',
         views.AdicionarContaPagarView.as_view(), name='addcontapagarview'),
-    # financeiro/contapagar/listacontapagar
+    url(r'contapagarprestacao/adicionar/$',
+        views.AdicionarContaPagarPrestacaoView.as_view(), name='addcontapagarprestacaoview'),
+
+    #/financeiro/contapagar/listacontapagar
     url(r'contapagar/listacontapagar/$',
         views.ContaPagarListView.as_view(), name='listacontapagarview'),
     # financeiro/contapagar/editar/
@@ -34,7 +39,11 @@ urlpatterns = [
     # financeiro/contareceber/adicionar/
     url(r'contareceber/adicionar/$',
         views.AdicionarContaReceberView.as_view(), name='addcontareceberview'),
-    # financeiro/contareceber/listacontapagar
+
+    url(r'contareceberprestacao/adicionar/$',
+        views.AdicionarContaReceberPrestacaoView.as_view(), name='addcontareceberprestacaoview'),
+
+    #/financeiro/contareceber/listacontapagar
     url(r'contareceber/listacontareceber/$',
         views.ContaReceberListView.as_view(), name='listacontareceberview'),
     # financeiro/contareceber/editar/
@@ -85,6 +94,17 @@ urlpatterns = [
     # financeiro/planodecontas/editargrupo/
     url(r'planodecontas/editargrupo/(?P<pk>[0-9]+)/$',
         views.EditarGrupoPlanoContasView.as_view(), name='editargrupoview'),
+
+    # Centro de custos
+
+    url(r'centrodecusto/$', views.CentroCustoView.as_view(), name='centrocustosview'),
+
+    url(r'centrodecusto/adicionar/$',
+        views.AdicionarCentroCustoView.as_view(), name='addcentrocustoview'),
+
+    url(r'centrodecusto/editar/(?P<pk>[0-9]+)/$',
+        views.EditarCentroCustoView.as_view(), name='editarcentrocustoview'),
+
 
     # Fluxo de caixa
     # financeiro/fluxodecaixa

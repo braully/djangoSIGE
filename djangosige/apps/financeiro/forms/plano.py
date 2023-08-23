@@ -4,7 +4,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 
-from djangosige.apps.financeiro.models import PlanoContasGrupo, PlanoContasSubgrupo
+from djangosige.apps.financeiro.models import PlanoContasGrupo, PlanoContasSubgrupo, CentroCusto
 
 
 class PlanoContasGrupoForm(forms.ModelForm):
@@ -20,6 +20,20 @@ class PlanoContasGrupoForm(forms.ModelForm):
             'descricao': _('Descrição'),
             'tipo_grupo': _('Tipo de lançamento'),
         }
+
+
+class CentroCustoForm(forms.ModelForm):
+
+    class Meta:
+        model = CentroCusto
+        fields = ('descricao',)
+        widgets = {
+            'descricao': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'descricao': _('Descrição'),
+        }
+
 
 
 class PlanoContasSubgrupoForm(forms.ModelForm):

@@ -121,7 +121,7 @@ class EditarBoletoBaseView(CustomUpdateView):
 #     template_name = "base/popup_form.html"
 #     form_class = CentroCustoForm
 #     model = CentroCusto
-#     success_url = reverse_lazy('financeiro:addcentrocustoview')
+#     success_url = reverse_lazy('djangosige.apps.financeiro:addcentrocustoview')
 #     permission_codename = 'add_centrocusto'
 #
 #     def get_context_data(self, **kwargs):

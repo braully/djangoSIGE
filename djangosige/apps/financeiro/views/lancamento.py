@@ -7,7 +7,7 @@ from django.http import JsonResponse
 
 from djangosige.apps.base.custom_views import CustomView, CustomCreateView, CustomListView, CustomUpdateView
 
-from djangosige.apps.financeiro.forms import ContaPagarForm, ContaReceberForm, SaidaForm, EntradaForm
+from djangosige.apps.financeiro.forms import ContaPagarForm, ContaReceberForm, SaidaForm, EntradaForm, ContaPagarPrestacaoForm, ContaReceberPrestacaoForm
 from djangosige.apps.financeiro.models import Lancamento, Saida, Entrada, MovimentoCaixa
 from djangosige.apps.vendas.models import PedidoVenda
 from djangosige.apps.compras.models import PedidoCompra
@@ -15,6 +15,7 @@ from djangosige.apps.estoque.models import SaidaEstoque, ItensMovimento, Produto
 
 from itertools import chain
 from datetime import datetime
+from ofxparse import OfxParser
 
 
 class MovimentoCaixaMixin(object):
@@ -148,6 +149,70 @@ class AdicionarLancamentoBaseView(CustomCreateView, MovimentoCaixaMixin):
         return self.form_invalid(form)
 
 
+class ImportarLancamentoView(AdicionarLancamentoBaseView):
+    permission_codename = ['add_lancamento', 'change_lancamento', 'view_lancamento']
+
+    def get_redirect_url(self):
+        return redirect(reverse_lazy('djangosige.apps.financeiro:listalancamentoview'))
+
+    def post(self, request, *args, **kwargs):
+        if len(request.FILES):
+            try:
+                self.importar_ofx(request)
+            except Exception as e:
+                messages.error(
+                    request, 'O seguinte erro foi encontrado ao tentar importar o arquivo OFX: ' + str(e))
+        else:
+            messages.error(request, 'Arquivo OFX não selecionado.')
+        return self.get_redirect_url()
+
+    def importar_ofx(self, request):
+
+        ofx_file = request.FILES['file']
+
+        ofx = OfxParser.parse(ofx_file)
+
+        account = ofx.account
+
+        statement = account.statement
+
+        qtd = 0
+
+        for transaction in statement.transactions:
+
+            data = transaction.date
+            numero = transaction.checknum
+            descricao = str(transaction.memo) + " Nº " + str(numero)
+            valor = transaction.amount
+
+            if valor < 0:
+                valor = valor * (-1)
+                saida, created = Saida.objects.get_or_create(
+                    descricao=descricao,
+                    data_pagamento=data,
+                    status='0',
+                    valor_total=valor,
+                    valor_liquido=valor,
+                    abatimento='0.00',
+                    juros='0.00',
+                )
+            else:
+                entrada, created = Entrada.objects.get_or_create(
+                    descricao=descricao,
+                    data_pagamento=data,
+                    status='0',
+                    valor_total=valor,
+                    valor_liquido=valor,
+                    abatimento='0.00',
+                    juros='0.00',
+                )
+
+            qtd += 1
+
+        messages.success(request, "Importação de " + str(qtd) + " lançamentos realizada com sucesso!")
+
+
+
 class AdicionarContaPagarView(AdicionarLancamentoBaseView):
     form_class = ContaPagarForm
     template_name = "financeiro/lancamento/lancamento_add.html"
@@ -202,6 +267,202 @@ class AdicionarSaidaView(AdicionarLancamentoBaseView):
         context['title_complete'] = 'ADICIONAR PAGAMENTO'
         context['return_url'] = reverse_lazy('djangosige.apps.financeiro:listapagamentosview')
         return context
+
+
+class AdicionarContaPagarPrestacaoView(CustomCreateView, MovimentoCaixaMixin):
+    form_class = ContaPagarPrestacaoForm
+    template_name = "financeiro/lancamento/lancamento_prestacao_add.html"
+    success_url = reverse_lazy('djangosige.apps.financeiro:listacontapagarview')
+    success_message = "Contas a pagar adicionadas com sucesso."
+    permission_codename = 'add_lancamento'
+
+    def get_context_data(self, **kwargs):
+        context = super(AdicionarContaPagarPrestacaoView, self).get_context_data(**kwargs)
+        context['title_complete'] = 'ADICIONAR CONTA A PAGAR PARCELADA'
+        context['return_url'] = reverse_lazy('djangosige.apps.financeiro:listacontapagarview')
+        return context
+
+    def get_success_message(self, cleaned_data):
+        return self.success_message % dict(cleaned_data, descricao=self.object.descricao)
+
+    def get(self, request, *args, **kwargs):
+        self.object = None
+        form_class = self.get_form_class()
+        form = form_class(user=request.user)
+        form.initial['data_pagamento'] = datetime.today().strftime('%d/%m/%Y')
+        return self.render_to_response(self.get_context_data(form=form))
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        # Tirar . dos campos decimais
+        req_post = request.POST.copy()
+        for key in req_post:
+            if ('valor' in key or
+                    'juros' in key or
+                    'abatimento' in key):
+                req_post[key] = req_post[key].replace('.', '')
+
+        request.POST = req_post
+
+        form_class = self.get_form_class()
+        form = form_class(request.POST, user=request.user)
+
+        if form.is_valid():
+            self.object = form.save(commit=False)
+
+            if self.object.movimentar_caixa:
+                mvmt = None
+                created = None
+
+                quantidade_parcelas = int(request.POST['quantidade_parcelas'])
+                valor_liquido = self.object.valor_liquido
+                valor_parcela = round((valor_liquido / quantidade_parcelas), 2)
+                resto = valor_liquido - (valor_parcela * quantidade_parcelas)
+                valor_ultima_parcela = round((valor_parcela + resto), 2)
+
+                for i in range(1, quantidade_parcelas + 1):
+                    parcela = self.object
+
+                    saida, created = Saida.objects.get_or_create(
+                        data_emissao=parcela.data_emissao,
+                        data_vencimento=parcela.primeiro_vencimento,
+                        descricao=parcela.descricao + " (" + str(i) + "/" + str(quantidade_parcelas) + ")",
+                        conta_corrente=parcela.conta_corrente,
+                        depreciacao_bem=parcela.depreciacao_bem,
+                        depreciacao_anos=parcela.depreciacao_anos,
+                        valor_total=valor_ultima_parcela if i == quantidade_parcelas else valor_parcela,
+                        abatimento=parcela.abatimento,
+                        juros=parcela.juros,
+                        valor_liquido=valor_ultima_parcela if i == quantidade_parcelas else valor_parcela,
+                        movimento_caixa=parcela.movimento_caixa,
+                        centro_custo=parcela.centro_custo,
+                        fornecedor=parcela.fornecedor,
+                        status=parcela.status,
+                        grupo_plano=parcela.grupo_plano,
+                        classificacao_dre=parcela.classificacao_dre,
+                    )
+
+                    if self.object.primeiro_vencimento:
+                        mvmt, created = MovimentoCaixa.objects.get_or_create(
+                            data_movimento=self.object.primeiro_vencimento)
+
+                    if mvmt:
+                        if created:
+                            self.atualizar_saldos(mvmt)
+
+                        self.adicionar_novo_movimento_caixa(
+                            lancamento=saida, novo_movimento=mvmt)
+                        mvmt.save()
+                        self.object.movimento_caixa = mvmt
+
+                    if self.object.tipo_recorrencia == '1':
+                        self.object.primeiro_vencimento = self.object.primeiro_vencimento + timedelta(days=self.object.recorrencia)
+                    elif self.object.tipo_recorrencia == '2':
+                        self.object.primeiro_vencimento = self.object.primeiro_vencimento + relativedelta(months=+self.object.recorrencia)
+                    else:
+                        self.object.primeiro_vencimento = self.object.primeiro_vencimento + relativedelta(years=+self.object.recorrencia)
+
+            return self.form_valid(form)
+
+        return self.form_invalid(form)
+
+
+class AdicionarContaReceberPrestacaoView(CustomCreateView, MovimentoCaixaMixin):
+    form_class = ContaReceberPrestacaoForm
+    template_name = "financeiro/lancamento/lancamento_prestacao_add.html"
+    success_url = reverse_lazy('djangosige.apps.financeiro:listacontareceberview')
+    success_message = "Contas a receber adicionadas com sucesso."
+    permission_codename = 'add_lancamento'
+
+    def get_context_data(self, **kwargs):
+        context = super(AdicionarContaReceberPrestacaoView,self).get_context_data(**kwargs)
+        context['title_complete'] = 'ADICIONAR CONTA A RECEBER PARCELADA'
+        context['return_url'] = reverse_lazy('djangosige.apps.financeiro:listacontareceberview')
+        return context
+
+    def get_success_message(self, cleaned_data):
+        return self.success_message % dict(cleaned_data, descricao=self.object.descricao)
+
+    def get(self, request, *args, **kwargs):
+        self.object = None
+        form_class = self.get_form_class()
+        form = form_class(user=request.user)
+        form.initial['data_pagamento'] = datetime.today().strftime('%d/%m/%Y')
+        return self.render_to_response(self.get_context_data(form=form))
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        # Tirar . dos campos decimais
+        req_post = request.POST.copy()
+        for key in req_post:
+            if ('valor' in key or
+                    'juros' in key or
+                    'abatimento' in key):
+                req_post[key] = req_post[key].replace('.', '')
+
+        request.POST = req_post
+
+        form_class = self.get_form_class()
+        form = form_class(request.POST, user=request.user)
+
+        if form.is_valid():
+            self.object = form.save(commit=False)
+
+            if self.object.movimentar_caixa:
+                mvmt = None
+                created = None
+
+                quantidade_parcelas = int(request.POST['quantidade_parcelas'])
+                valor_liquido = self.object.valor_liquido
+                valor_parcela = round((valor_liquido / quantidade_parcelas), 2)
+                resto = valor_liquido - (valor_parcela * quantidade_parcelas)
+                valor_ultima_parcela = round((valor_parcela + resto), 2)
+
+                for i in range(1, quantidade_parcelas + 1):
+                    parcela = self.object
+
+                    entrada, created = Entrada.objects.get_or_create(
+                        data_emissao=parcela.data_emissao,
+                        data_vencimento=parcela.primeiro_vencimento,
+                        descricao=parcela.descricao + " (" + str(i) + "/" + str(quantidade_parcelas) + ")",
+                        conta_corrente=parcela.conta_corrente,
+                        depreciacao_bem=parcela.depreciacao_bem,
+                        depreciacao_anos=parcela.depreciacao_anos,
+                        valor_total=valor_ultima_parcela if i == quantidade_parcelas else valor_parcela,
+                        abatimento=parcela.abatimento,
+                        juros=parcela.juros,
+                        valor_liquido=valor_ultima_parcela if i == quantidade_parcelas else valor_parcela,
+                        movimento_caixa=parcela.movimento_caixa,
+                        centro_custo=parcela.centro_custo,
+                        cliente=parcela.cliente,
+                        status=parcela.status,
+                        grupo_plano=parcela.grupo_plano,
+                        classificacao_dre=parcela.classificacao_dre,
+                    )
+
+                    if self.object.primeiro_vencimento:
+                        mvmt, created = MovimentoCaixa.objects.get_or_create(
+                            data_movimento=self.object.primeiro_vencimento)
+
+                    if mvmt:
+                        if created:
+                            self.atualizar_saldos(mvmt)
+
+                        self.adicionar_novo_movimento_caixa(
+                            lancamento=entrada, novo_movimento=mvmt)
+                        mvmt.save()
+                        self.object.movimento_caixa = mvmt
+
+                    if self.object.tipo_recorrencia == '1':
+                        self.object.primeiro_vencimento = self.object.primeiro_vencimento + timedelta(days=self.object.recorrencia)
+                    elif self.object.tipo_recorrencia == '2':
+                        self.object.primeiro_vencimento = self.object.primeiro_vencimento + relativedelta(months=+self.object.recorrencia)
+                    else:
+                        self.object.primeiro_vencimento = self.object.primeiro_vencimento + relativedelta(years=+self.object.recorrencia)
+
+            return self.form_valid(form)
+
+        return self.form_invalid(form)
 
 
 class EditarLancamentoBaseView(CustomUpdateView, MovimentoCaixaMixin):
@@ -404,6 +665,7 @@ class LancamentoListView(LancamentoListBaseView):
         context = super(LancamentoListView, self).get_context_data(**kwargs)
         context['title_complete'] = 'TODOS OS LANÇAMENTOS'
         context['all_lancamentos_saidas'] = Saida.objects.all()
+        context['importar_lancamento_url'] = reverse_lazy('djangosige.apps.financeiro:importarlancamentoview')
         return context
 
     def get_queryset(self):
@@ -653,6 +915,7 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
                         lista_itens_saida.append(item_mvmt)
 
                         prod_estocado.produto.estoque_atual -= item.quantidade
+                        prod_estocado.produto.quantidade_vendida += item.quantidade
                         prod_estocado.quantidade -= item.quantidade
                         lista_prod_estocado.append(prod_estocado)
 
@@ -695,6 +958,9 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
             if self.atualizar_estoque(request, pedido):
                 return redirect(request.META['HTTP_REFERER'])
 
+        cliente = Cliente.objects.filter(id=pedido.cliente.id).get()
+        total = 0
+
         for pagamento in pagamentos:
             entrada = Entrada()
             entrada.cliente = pedido.cliente
@@ -705,6 +971,7 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
             entrada.valor_total = pagamento.valor_parcela
             entrada.valor_liquido = pagamento.valor_parcela
             entrada.save()
+            total += pagamento.valor_parcela
             mvmt = None
             created = None
             if pagamento.vencimento:
@@ -720,6 +987,9 @@ class FaturarPedidoVendaView(CustomView, MovimentoCaixaMixin):
                 mvmt.save()
                 entrada.movimento_caixa = mvmt
                 entrada.save()
+
+        cliente.valor_total_vendas += total
+        cliente.save()
 
         pedido.status = '1'
         pedido.save()

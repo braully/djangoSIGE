@@ -2,8 +2,10 @@
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from datetime import datetime
+#from SGEO.apps.financeiro.models import ContaPagar, ContaReceber
 from djangosige.apps.financeiro.models import Saida, Entrada, STATUS_CONTA_ENTRADA_ESCOLHAS, STATUS_CONTA_SAIDA_ESCOLHAS
-from djangosige.apps.financeiro.models import PlanoContasGrupo
+from djangosige.apps.financeiro.models import PlanoContasGrupo, EntradaPrestacao, SaidaPrestacao
 from djangosige.apps.login.models import Usuario
 from djangosige.apps.cadastro.models import MinhaEmpresa, Banco
 
@@ -39,18 +41,24 @@ class LancamentoForm(forms.ModelForm):
 
     class Meta:
         fields = ('descricao', 'grupo_plano', 'conta_corrente', 'data_pagamento', 'data_vencimento',
-                  'valor_total', 'abatimento', 'juros', 'valor_liquido', 'movimentar_caixa',)
+                  'valor_total', 'abatimento', 'juros', 'valor_liquido', 'movimentar_caixa', 'depreciacao_bem',
+                  'depreciacao_anos', 'data_emissao', 'centro_custo', 'arquivo')
         widgets = {
             'descricao': forms.TextInput(attrs={'class': 'form-control'}),
             'grupo_plano': forms.Select(attrs={'class': 'form-control'}),
             'conta_corrente': forms.Select(attrs={'class': 'form-control'}),
             'data_pagamento': forms.DateInput(attrs={'class': 'form-control datepicker'}),
+            'data_emissao': forms.DateInput(attrs={'class': 'form-control datepicker'}),
             'data_vencimento': forms.DateInput(attrs={'class': 'form-control datepicker'}),
             'valor_total': forms.TextInput(attrs={'class': 'form-control decimal-mask'}),
+            'depreciacao_bem': forms.Select(attrs={'class': 'form-control'}),
+            'depreciacao_anos': forms.TextInput(attrs={'class': 'form-control'}),
             'abatimento': forms.TextInput(attrs={'class': 'form-control decimal-mask'}),
             'juros': forms.TextInput(attrs={'class': 'form-control decimal-mask'}),
             'valor_liquido': forms.TextInput(attrs={'class': 'form-control decimal-mask'}),
             'movimentar_caixa': forms.CheckboxInput(attrs={'class': 'form-control'}),
+            'centro_custo': forms.Select(attrs={'class': 'form-control'}),
+            'arquivo': forms.FileInput(attrs={'class': 'form-control'}),
         }
         labels = {
             'descricao': _('Descrição'),
@@ -63,6 +71,11 @@ class LancamentoForm(forms.ModelForm):
             'juros': _('Juros'),
             'valor_liquido': _('Valor líquido'),
             'movimentar_caixa': _('Movimentar Caixa?'),
+            'depreciacao_bem': 'Descrição da Depreciação',
+            'depreciacao_anos': 'Tempo de Depreciação (anos)',
+            'centro_custo': 'Centro de Custo',
+            'data_emissao': 'Data de emissão',
+            'arquivo': 'Arquivo (max. 1Mb)'
         }
 
 
@@ -73,21 +86,23 @@ class EntradaForm(LancamentoForm):
         self.fields['status'].initial = '0'
 
         if PlanoContasGrupo.objects.filter(tipo_grupo='1').count():
-            self.fields['grupo_plano'].choices = ((grupo.id, str(grupo.codigo) + ' - ' + str(
+            self.fields['grupo_plano'].choices = ((grupo.id,  str(grupo.codigo) + ' - ' + str(
                 grupo.descricao)) for grupo in PlanoContasGrupo.objects.filter(tipo_grupo='0'))
         else:
             self.fields['grupo_plano'].choices = ((None, '----------'),)
 
     class Meta(LancamentoForm.Meta):
         model = Entrada
-        fields = LancamentoForm.Meta.fields + ('cliente', 'status',)
+        fields = LancamentoForm.Meta.fields + ('cliente', 'status', 'classificacao_dre')
         widgets = LancamentoForm.Meta.widgets
         widgets['cliente'] = forms.Select(attrs={'class': 'form-control'})
         widgets['status'] = forms.Select(
             attrs={'class': 'form-control', 'disabled': True})
+        widgets['classificacao_dre'] = forms.Select(attrs={'class': 'form-control'})
         labels = LancamentoForm.Meta.labels
         labels['cliente'] = _('Cliente')
         labels['status'] = _('Status')
+        labels['classificacao_dre'] = 'Classificação (DRE)'
 
 
 class SaidaForm(LancamentoForm):
@@ -97,21 +112,23 @@ class SaidaForm(LancamentoForm):
         self.fields['status'].initial = '0'
 
         if PlanoContasGrupo.objects.filter(tipo_grupo='1').count():
-            self.fields['grupo_plano'].choices = ((grupo.id, str(grupo.codigo) + ' - ' + str(
+            self.fields['grupo_plano'].choices = ((grupo.id,  str(grupo.codigo) + ' - ' + str(
                 grupo.descricao)) for grupo in PlanoContasGrupo.objects.filter(tipo_grupo='1'))
         else:
             self.fields['grupo_plano'].choices = ((None, '----------'),)
 
     class Meta(LancamentoForm.Meta):
         model = Saida
-        fields = LancamentoForm.Meta.fields + ('fornecedor', 'status',)
+        fields = LancamentoForm.Meta.fields + ('fornecedor', 'status', 'classificacao_dre')
         widgets = LancamentoForm.Meta.widgets
         widgets['fornecedor'] = forms.Select(attrs={'class': 'form-control'})
         widgets['status'] = forms.Select(
             attrs={'class': 'form-control', 'disabled': True})
+        widgets['classificacao_dre'] = forms.Select(attrs={'class': 'form-control'})
         labels = LancamentoForm.Meta.labels
         labels['fornecedor'] = _('Fornecedor')
         labels['status'] = _('Status')
+        labels['classificacao_dre'] = 'Classificação (DRE)'
 
 
 class ContaReceberForm(EntradaForm):
@@ -132,3 +149,50 @@ class ContaPagarForm(SaidaForm):
         self.fields['status'].initial = '1'
         self.fields['data_pagamento'].widget.attrs = {
             'class': 'form-control hidden', 'disabled': True, 'style': 'background-color:lightgrey;'}
+
+
+class ContaReceberPrestacaoForm(ContaReceberForm):
+    def __init__(self, *args, **kwargs):
+        super(ContaReceberForm, self).__init__(*args, **kwargs)
+        self.fields['primeiro_vencimento'].initial = datetime.today().strftime('%d/%m/%Y')
+        self.fields['status'].choices = STATUS_CONTA_ENTRADA_ESCOLHAS
+        self.fields['status'].initial = '1'
+
+
+    class Meta(ContaReceberForm.Meta):
+        model = EntradaPrestacao
+        fields = ContaReceberForm.Meta.fields + ('recorrencia', 'tipo_recorrencia', 'primeiro_vencimento', 'quantidade_parcelas')
+        widgets = ContaReceberForm.Meta.widgets
+        widgets['recorrencia'] = forms.NumberInput(attrs={'class': 'form-control'})
+        widgets['tipo_recorrencia'] = forms.Select(attrs={'class': 'form-control'})
+        widgets['primeiro_vencimento'] = forms.DateInput(attrs={'class': 'form-control datepicker'})
+        widgets['quantidade_parcelas'] = forms.NumberInput(attrs={'class': 'form-control'})
+        labels = ContaReceberForm.Meta.labels
+        labels['recorrencia'] = 'Recorrência'
+        labels['tipo_recorrencia'] = 'Tipo de Recorrência'
+        labels['primeiro_vencimento'] = 'Primeiro Vencimento'
+        labels['quantidade_parcelas'] = 'Quantidade de Parcelas'
+
+
+class ContaPagarPrestacaoForm(ContaPagarForm):
+    def __init__(self, *args, **kwargs):
+        super(ContaPagarForm, self).__init__(*args, **kwargs)
+        self.fields['primeiro_vencimento'].initial = datetime.today().strftime('%d/%m/%Y')
+        self.fields['status'].choices = STATUS_CONTA_SAIDA_ESCOLHAS
+        self.fields['status'].initial = '1'
+
+    class Meta(ContaPagarForm.Meta):
+        model = SaidaPrestacao
+        fields = ContaPagarForm.Meta.fields + ('recorrencia', 'tipo_recorrencia', 'primeiro_vencimento', 'quantidade_parcelas')
+        widgets = ContaPagarForm.Meta.widgets
+        widgets['recorrencia'] = forms.NumberInput(attrs={'class': 'form-control'})
+        widgets['tipo_recorrencia'] = forms.Select(attrs={'class': 'form-control'})
+        widgets['primeiro_vencimento'] = forms.DateInput(attrs={'class': 'form-control datepicker'})
+        widgets['quantidade_parcelas'] = forms.NumberInput(attrs={'class': 'form-control'})
+        labels = ContaPagarForm.Meta.labels
+        labels['recorrencia'] = 'Recorrência'
+        labels['tipo_recorrencia'] = 'Tipo de Recorrência'
+        labels['primeiro_vencimento'] = 'Primeiro Vencimento'
+        labels['quantidade_parcelas'] = 'Quantidade de Parcelas'
+
+

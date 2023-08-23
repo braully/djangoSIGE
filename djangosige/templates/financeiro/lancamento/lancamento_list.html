@@ -29,6 +29,9 @@
                     <li><a href="{% url 'djangosige.apps.financeiro:addcontapagarview' %}">Conta a pagar</a></li>
                     <li><a href="{% url 'djangosige.apps.financeiro:addrecebimentoview' %}">Recebimento</a></li>
                     <li><a href="{% url 'djangosige.apps.financeiro:addcontareceberview' %}">Conta a receber</a></li>
+                    <li><a id="importar_lancamento" href="javascript:void(0);" class="btn btn-primary">Importar lançamentos</a>
+                    </li>
+
                   </ul>
                 </div>
                 {% endif %}
@@ -59,6 +62,7 @@
     </form>
 
     {% include 'financeiro/lancamento/modal_selecionar_data.html' %}
+    {% include 'financeiro/lancamento/modal_importar_lancamento.html' %}
 
   </div>
 </div>
@@ -88,4 +92,9 @@
     $.Admin.lancamentoList.init(req_urls);
   </script>
   
+  <script type="text/javascript">
+    $('body').on('click', '#importar_lancamento', function(){
+      $('.importar_lancamento_modal').modal('show');
+    });
+  </script>
 {% endblock %}

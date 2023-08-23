@@ -15,6 +15,27 @@ class PlanoContasGrupo(models.Model):
 
     class Meta:
         verbose_name = "Grupo do Plano de Contas"
+        permissions = (
+#            ("view_planocontasgrupo", "Can view plano contas"),
+        )
+
+    def __unicode__(self):
+        s = u'%s' % (self.descricao)
+        return s
+
+    def __str__(self):
+        s = u'%s' % (self.descricao)
+        return s
+
+
+class CentroCusto(models.Model):
+    descricao = models.CharField(max_length=255)
+
+    class Meta:
+        verbose_name = "Centro de Custo"
+        permissions = (
+#            ("view_centrocusto", "Can view centro de custo"),
+        )
 
     def __unicode__(self):
         s = u'%s' % (self.descricao)

@@ -18,6 +18,11 @@ from pysignfe.nfe.manual_700.nfe_400 import Dup as Dup_400
 
 from ssl import SSLError
 
+#FIXME: Urgente, remover o import abaixo, pois ele é usado apenas para testes
+#https://stackoverflow.com/questions/27835619/urllib-and-ssl-certificate-verify-failed-error
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 
 class ProcessadorNotaFiscal(object):
 
@@ -1358,7 +1363,7 @@ class ProcessadorNotaFiscal(object):
                 elif processos['lote'].resposta.status in (u'403', 403):
                     e = RespostaSefazNotaFiscal(nfe=nota_obj)
                     e.tipo = u'0'
-                    e.descricao = 'Erro de autenticação, verifique se seu certificado é válido.'
+                    e.descricao = 'Erro 403 de autenticação, verifique se seu certificado é válido.'
                     e.save()
                     self.salvar_mensagem(message=e.descricao, erro=True)
 
@@ -1372,12 +1377,14 @@ class ProcessadorNotaFiscal(object):
                 nota_obj.numero_lote = processos['numero_lote']
                 nota_obj.save()
 
-            except SSLError:
+            except SSLError as err:
+                print(err)
                 e = RespostaSefazNotaFiscal(nfe=nota_obj)
                 e.tipo = u'0'
-                e.descricao = 'Erro de autenticação, verifique se seu certificado é válido.'
+                e.descricao = 'Erro de ssl autenticação, verifique se seu certificado é válido.'
                 e.save()
                 self.salvar_mensagem(message=e.descricao, erro=True)
+                raise err
 
     def cancelar_nota(self, nota_obj):
         RespostaSefazNotaFiscal.objects.filter(nfe=nota_obj).delete()
@@ -1440,7 +1447,7 @@ class ProcessadorNotaFiscal(object):
                 elif processo.resposta.status in (u'403', 403):
                     e = RespostaSefazNotaFiscal(nfe=nota_obj)
                     e.tipo = u'0'
-                    e.descricao = 'Erro de autenticação, verifique se seu certificado é válido.'
+                    e.descricao = 'Erro 4032 de autenticação, verifique se seu certificado é válido.'
                     e.save()
                     self.salvar_mensagem(message=e.descricao, erro=True)
 
@@ -1451,10 +1458,11 @@ class ProcessadorNotaFiscal(object):
                     e.save()
                     self.salvar_mensagem(message=e.descricao, erro=True)
 
-            except SSLError:
+            except SSLError as err:
+                print(err)
                 e = RespostaSefazNotaFiscal(nfe=nota_obj)
                 e.tipo = u'0'
-                e.descricao = 'Erro de autenticação, verifique se seu certificado é válido.'
+                e.descricao = 'Erro de ssl2 autenticação, verifique se seu certificado é válido.'
                 e.save()
                 self.salvar_mensagem(message=e.descricao, erro=True)
 
@@ -1539,6 +1547,8 @@ class ProcessadorNotaFiscal(object):
                     return self.salvar_mensagem(message='Erro ao consultar cadastro, verifique a versão do seu aplicativo e a validade do seu certificado.', erro=True)
 
             except SSLError as e:
+                print(e)
+                raise e
                 return self.salvar_mensagem(message=u'Erro de autenticação: {}'.format(e), erro=True)
 
     def inutilizar_notas(self, empresa, ambiente, modelo, serie, numero_inicial, numero_final, justificativa, salvar_arquivos):

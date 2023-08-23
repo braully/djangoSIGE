@@ -3,10 +3,10 @@
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
 
-from djangosige.apps.base.custom_views import CustomCreateView, CustomUpdateView, CustomTemplateView
+from djangosige.apps.base.custom_views import CustomCreateView, CustomUpdateView, CustomTemplateView, CustomListView
 
-from djangosige.apps.financeiro.models import PlanoContasGrupo, PlanoContasSubgrupo
-from djangosige.apps.financeiro.forms import PlanoContasGrupoForm, PlanoContasSubgrupoFormSet
+from djangosige.apps.financeiro.models import PlanoContasGrupo, PlanoContasSubgrupo, CentroCusto
+from djangosige.apps.financeiro.forms import PlanoContasGrupoForm, PlanoContasSubgrupoFormSet, CentroCustoForm
 
 
 class PlanoContasView(CustomTemplateView):
@@ -167,3 +167,40 @@ class EditarGrupoPlanoContasView(CustomUpdateView):
             return self.form_valid(form)
 
         return self.form_invalid(form=form, subgrupo_form=subgrupo_form)
+
+
+class AdicionarCentroCustoView(CustomCreateView):
+    template_name = "base/popup_form.html"
+    form_class = CentroCustoForm
+    model = CentroCusto
+    success_url = reverse_lazy('djangosige.apps.financeiro:addcentrocustoview')
+    permission_codename = 'add_centrocusto'
+
+    def get_context_data(self, **kwargs):
+        context = super(AdicionarCentroCustoView,
+                        self).get_context_data(**kwargs)
+        context['titulo'] = 'Adicionar Centro de Custo'
+        return context
+
+
+class EditarCentroCustoView(CustomUpdateView):
+    template_name = "base/popup_form.html"
+    form_class = CentroCustoForm
+    model = CentroCusto
+    success_url = reverse_lazy('djangosige.apps.financeiro:centrocustosview')
+    permission_codename = 'change_centrocusto'
+
+    def get_context_data(self, **kwargs):
+        context = super(EditarCentroCustoView,
+                        self).get_context_data(**kwargs)
+        context['titulo'] = 'Editar Centro de Custo: {0}'.format(str(self.object))
+        return context
+
+
+class CentroCustoView(CustomListView):
+    model = CentroCusto
+    template_name = 'financeiro/plano/centro_custo_list.html'
+    context_object_name = 'all_centrocustos'
+    success_url = reverse_lazy('djangosige.apps.financeiro:centrocustosview')
+    permission_codename = 'view_marca'
+

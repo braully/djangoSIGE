@@ -21,6 +21,43 @@ STATUS_CONTA_ENTRADA_ESCOLHAS = (
     (u'2', u'Atrasada'),
 )
 
+DEPRECIACAO_BENS = [
+    ('1', 'Aparelhos e Instrumentos'),
+    ('2', 'Caixas, Formas, Moldes, e Vasilhames'),
+    ('3', 'Eletrônicos'),
+    ('4', 'Equipamentos de Comunicação'),
+    ('5', 'Imóveis, Edifícios e Benfeitorias'),
+    ('6', 'Ferramentas e Dispositivos'),
+    ('7', 'Instalações'),
+    ('8', 'Máquinas e Equipamentos'),
+    ('9', 'Máquinas e Equipamentos Usados'),
+    ('10', 'Móveis e Utensílios'),
+    ('11', 'Veículos'),
+    ('12', 'Veículos Usados'),
+    ('13', 'Outros')
+]
+
+TIPOS_RECORRENCIA = [
+    ('1', 'Dias'),
+    ('2', 'Meses'),
+    ('3', 'Anos')
+]
+
+CLASSIFICACAO_DRE_ENTRADA = [
+    ('1', 'Venda de produtos/mercadorias'),
+    ('2', 'Venda de serviços'),
+    ('3', 'Receita financeira'),
+    ('4', 'Outra receita')
+]
+
+CLASSIFICACAO_DRE_SAIDA = [
+    ('1', 'Despesa com vendas'),
+    ('2', 'Despesa administrativa'),
+    ('3', 'Pró-labore'),
+    ('4', 'Despesa financeira'),
+    ('5', 'Outra despesa'),
+]
+
 
 class Lancamento(models.Model):
     data_emissao = models.DateField(null=True, blank=True)
@@ -29,6 +66,10 @@ class Lancamento(models.Model):
     descricao = models.CharField(max_length=255)
     conta_corrente = models.ForeignKey(
         'cadastro.Banco', related_name="conta_corrente_conta", on_delete=models.SET_NULL, null=True, blank=True)
+    depreciacao_bem = models.CharField(
+        max_length=2, choices=DEPRECIACAO_BENS, null=True, blank=True)
+    depreciacao_anos = models.DecimalField(max_digits=13, decimal_places=2, validators=[
+                                      MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'), null=True, blank=True)
     valor_total = models.DecimalField(max_digits=13, decimal_places=2, validators=[
                                       MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'))
     abatimento = models.DecimalField(max_digits=13, decimal_places=2, validators=[
@@ -40,9 +81,16 @@ class Lancamento(models.Model):
     movimentar_caixa = models.BooleanField(default=True)
     movimento_caixa = models.ForeignKey(
         'financeiro.MovimentoCaixa', related_name="movimento_caixa_lancamento", on_delete=models.SET_NULL, null=True, blank=True)
+    centro_custo = models.ForeignKey(
+        'financeiro.CentroCusto', related_name="centro_custo", on_delete=models.SET_NULL, null=True, blank=True)
+    arquivo = models.FileField(
+        upload_to='arquivos/lancamentos/', null=True, blank=True)
 
     class Meta:
         verbose_name = "Lançamento"
+        permissions = (
+#            ("view_lancamento", "Can view lancamento"),
+        )
 
     def format_valor_liquido(self):
         return locale.format(u'%.2f', self.valor_liquido, 1)
@@ -63,6 +111,8 @@ class Entrada(Lancamento):
         max_length=1, choices=STATUS_CONTA_ENTRADA_ESCOLHAS, default='1')
     grupo_plano = models.ForeignKey(
         'financeiro.PlanoContasGrupo', related_name="grupo_plano_recebimento", on_delete=models.SET_NULL, null=True, blank=True)
+    classificacao_dre = models.CharField(
+        max_length=1, choices=CLASSIFICACAO_DRE_ENTRADA, null=True, blank=True)
 
     def get_edit_url(self):
         if self.status == '0':
@@ -81,6 +131,8 @@ class Saida(Lancamento):
         max_length=1, choices=STATUS_CONTA_SAIDA_ESCOLHAS, default='1')
     grupo_plano = models.ForeignKey(
         'financeiro.PlanoContasGrupo', related_name="grupo_plano_pagamento", on_delete=models.SET_NULL, null=True, blank=True)
+    classificacao_dre = models.CharField(
+        max_length=1, choices=CLASSIFICACAO_DRE_SAIDA, null=True, blank=True)
 
     def get_edit_url(self):
         if self.status == '0':
@@ -90,6 +142,28 @@ class Saida(Lancamento):
 
     def get_tipo(self):
         return 'Saida'
+
+
+class Parcela(models.Model):
+    data_vencimento = models.DateField()
+    valor = models.DecimalField(max_digits=13, decimal_places=2, validators=[
+                                      MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'))
+
+
+class EntradaPrestacao(Entrada):
+    recorrencia = models.PositiveIntegerField(default=0)
+    tipo_recorrencia = models.CharField(
+        max_length=1, choices=TIPOS_RECORRENCIA, default='1')
+    primeiro_vencimento = models.DateField()
+    quantidade_parcelas = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
+
+
+class SaidaPrestacao(Saida):
+    recorrencia = models.PositiveIntegerField(default=0)
+    tipo_recorrencia = models.CharField(
+        max_length=1, choices=TIPOS_RECORRENCIA, default='1')
+    primeiro_vencimento = models.DateField()
+    quantidade_parcelas = models.PositiveIntegerField(validators=[MinValueValidator(1)], default=1)
 
 
 class MovimentoCaixa(models.Model):
