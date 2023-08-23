@@ -19,3 +19,4 @@ django-tables2==2.*
 django-tables2-column-shifter==2.*
 django-filter==2.*
 tablib
+ofxparser
