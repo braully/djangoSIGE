@@ -20,3 +20,5 @@ django-tables2-column-shifter==2.*
 django-filter==2.*
 tablib
 ofxparse
+django_pdfkit
+django-autocomplete-light

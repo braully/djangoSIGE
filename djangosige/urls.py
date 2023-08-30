@@ -20,6 +20,8 @@ urlpatterns = [
     # novos
     url(r'^boletos/', include('djangosige.apps.boletos.urls')),
     url(r'^relatorios/', include('djangosige.apps.relatorios.urls')),
+
+    url(r'^todo/', include('todo.urls', namespace="todo")),
 ]
 
 if DEBUG is True:
