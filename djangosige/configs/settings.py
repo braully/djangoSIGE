@@ -140,10 +140,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
 
+FIXTURE_DIRS = [
+    os.path.join(APP_ROOT, 'fixtures'),
+]
+
 STATIC_URL = '/static/'
+# various locations.
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+)
 
 STATICFILES_DIRS = [
     os.path.join(APP_ROOT, 'static'),
+    os.path.join(PROJECT_ROOT, 'static'),
 ]
 
 FIXTURE_DIRS = [
