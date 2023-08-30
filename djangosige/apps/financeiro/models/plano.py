@@ -19,6 +19,13 @@ class PlanoContasGrupo(models.Model):
 #            ("view_planocontasgrupo", "Can view plano contas"),
         )
 
+    def childrens_all(self):
+        children = []
+        for child in self.subgrupos.all():
+            children.append(child)
+            children.extend(child.childrens_all())
+        return children
+
     def __unicode__(self):
         s = u'%s' % (self.descricao)
         return s
