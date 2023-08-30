@@ -106,8 +106,8 @@
                       <label class="remove-entry-label" for="remover-entrada-{{gs.id}}"></label>
                     </td>
                   </tr>
-                    {% for sub in gs.subgrupos.all %}
-                  <tr class="plano-subgrupo-row accordion-{{gs.id}} in">
+                    {% for sub in gs.childrens_all.all %}
+                  <tr class="clickable-row plano-subgrupo-row accordion-{{gs.id}} in" data-href="{% url 'djangosige.apps.financeiro:editargrupoview' sub.id %}">
                     <td>{{sub.codigo}}</td>
                     <td>{{sub.descricao}}</td>
                     <td>{{sub.get_tipo_grupo_display}}</td>
