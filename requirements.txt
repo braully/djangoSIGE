@@ -22,3 +22,4 @@ tablib
 ofxparse
 django_pdfkit
 django-autocomplete-light
+django-todo
