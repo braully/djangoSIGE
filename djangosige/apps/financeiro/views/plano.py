@@ -19,7 +19,8 @@ class PlanoContasView(CustomTemplateView):
         grupo_entrada = []
         grupo_saida = []
 
-        for grupo in PlanoContasGrupo.objects.all():
+        all_grupos = PlanoContasGrupo.objects.all()
+        for grupo in all_grupos:
             if grupo.tipo_grupo == '0' and '.' not in grupo.codigo:
                 grupo_entrada.append(grupo)
             elif grupo.tipo_grupo == '1' and '.' not in grupo.codigo:
@@ -27,6 +28,7 @@ class PlanoContasView(CustomTemplateView):
 
         context['all_grupos_entrada'] = grupo_entrada
         context['all_grupos_saida'] = grupo_saida
+        context['all_grupos'] = all_grupos
         return context
 
     # Remover items selecionados da database
