@@ -57,7 +57,7 @@ class RelatorioClientesView(SingleTableMixin, ExportMixin, CustomListView):
                     pessoa_fis_info__nascimento__month__gte=datetime.now().month
                     )[:6]
 
-        context['maiores_vendas'] = self.model.objects.order_by('-valor_total_vendas')[:10]
+        # context['maiores_vendas'] = self.model.objects.order_by('-valor_total_vendas')[:10]
         context['maiores_vendas'] = reversed(context['maiores_vendas'])
 
         table = ClienteTable(Cliente.objects.all())

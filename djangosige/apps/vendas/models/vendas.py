@@ -382,12 +382,14 @@ class Venda(models.Model):
             return ""
 
     def get_valor_total_attr(self, nome_attr):
-        valor_total = 0
+        valor_total = 0.0
         for item in self.itens_venda.all():
-            v = getattr(item, nome_attr, 0)
+            v = getattr(item, nome_attr, 0.0)
             if v:
-                valor_total += v
-
+                if isinstance(v, Decimal):
+                    valor_total += float(v)
+                else:
+                    valor_total += v
         return valor_total
 
     def get_child(self):

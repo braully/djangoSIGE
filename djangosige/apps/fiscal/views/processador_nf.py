@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from ssl import SSLError
 
 from djangosige.apps.fiscal.models import NotaFiscalSaida, NotaFiscalEntrada, ConfiguracaoNotaFiscal, AutXML, \
     ErrosValidacaoNotaFiscal, RespostaSefazNotaFiscal, NaturezaOperacao, GrupoFiscal, \
@@ -11,7 +12,7 @@ from djangosige.apps.vendas.models import PedidoVenda, ItensVenda
 from djangosige.apps.vendas.models import Pagamento as PagamentoVenda
 
 from pysignfe.nf_e import nf_e
-from pysignfe.nfe.manual_700.nfe_400 import NFe as NFe_400
+from pysignfe.nfe.manual_700.nfe_400 import DetPag, NFe as NFe_400
 from pysignfe.nfe.manual_700.nfe_400 import Det as Det_400
 from pysignfe.nfe.manual_700.nfe_400 import autXML as autXML_400
 from pysignfe.nfe.manual_700.nfe_400 import Dup as Dup_400
@@ -43,16 +44,21 @@ class ProcessadorNotaFiscal(object):
         if versao == '4.00':
             nfe = NFe_400()
 
+        nfe.auto_preencher_campos(ambiente=int(nota_obj.tp_amb), estado=nota_obj.estado)
+
         nfe.infNFe.ide.natOp.valor = nota_obj.natop
         nfe.infNFe.ide.indPag.valor = nota_obj.indpag
         nfe.infNFe.ide.serie.valor = nota_obj.serie
         nfe.infNFe.ide.nNF.valor = nota_obj.n_nf_saida
 
         if nota_obj.dhemi:
-            nfe.infNFe.ide.dhEmi.valor = nota_obj.dhemi.replace(tzinfo=None)
+            # nfe.infNFe.ide.dhEmi.valor = nota_obj.dhemi.replace(tzinfo=None)
+            nfe.infNFe.ide.dhEmi.valor = f"{nota_obj.dhemi.strftime('%Y-%m-%dT%H:%M:%S')}-03:00"
+            print(f"DHMEI: {nota_obj.dhemi.strftime('%Y-%m-%dT%H:%M:%S')}-03:00")
         if nota_obj.dhsaient:
-            nfe.infNFe.ide.dhSaiEnt.valor = nota_obj.dhsaient.replace(
-                tzinfo=None)
+            # nfe.infNFe.ide.dhSaiEnt.valor = nota_obj.dhsaient.replace(tzinfo=None)
+            nfe.infNFe.ide.dhSaiEnt.valor = nota_obj.dhsaient.strftime('%Y-%m-%dT%H:%M:%S')
+            
 
         nfe.infNFe.ide.tpNF.valor = nota_obj.tpnf
         nfe.infNFe.ide.idDest.valor = nota_obj.iddest
@@ -68,7 +74,8 @@ class ProcessadorNotaFiscal(object):
             nfe.infNFe.emit.xNome.valor = nota_obj.emit_saida.nome_razao_social
             nfe.infNFe.emit.xFant.valor = nota_obj.emit_saida.pessoa_jur_info.nome_fantasia
             nfe.infNFe.emit.IE.valor = nota_obj.emit_saida.pessoa_jur_info.inscricao_estadual
-            nfe.infNFe.emit.IEST.valor = nota_obj.emit_saida.iest
+            if nota_obj.emit_saida.iest:
+                nfe.infNFe.emit.IEST.valor = nota_obj.emit_saida.iest
 
             if nota_obj.emit_saida.pessoa_jur_info.sit_fiscal == 'SN':
                 nfe.infNFe.emit.CRT.valor = '1'
@@ -79,7 +86,10 @@ class ProcessadorNotaFiscal(object):
 
             if nota_obj.emit_saida.endereco_padrao:
                 nfe.infNFe.emit.enderEmit.xLgr.valor = nota_obj.emit_saida.endereco_padrao.logradouro
-                nfe.infNFe.emit.enderEmit.nro.valor = nota_obj.emit_saida.endereco_padrao.numero
+                if nota_obj.emit_saida.endereco_padrao.numero:
+                    nfe.infNFe.emit.enderEmit.nro.valor = nota_obj.emit_saida.endereco_padrao.numero
+                else:
+                    nfe.infNFe.emit.enderEmit.nro.valor = 'SN'
                 nfe.infNFe.emit.enderEmit.xCpl.valor = nota_obj.emit_saida.endereco_padrao.complemento
                 nfe.infNFe.emit.enderEmit.xBairro.valor = nota_obj.emit_saida.endereco_padrao.bairro
                 nfe.infNFe.emit.enderEmit.cMun.valor = nota_obj.emit_saida.endereco_padrao.cmun
@@ -109,7 +119,11 @@ class ProcessadorNotaFiscal(object):
 
             if nota_obj.dest_saida.endereco_padrao:
                 nfe.infNFe.dest.enderDest.xLgr.valor = nota_obj.dest_saida.endereco_padrao.logradouro
-                nfe.infNFe.dest.enderDest.nro.valor = nota_obj.dest_saida.endereco_padrao.numero
+                if nota_obj.dest_saida.endereco_padrao.numero:
+                    nfe.infNFe.dest.enderDest.nro.valor = nota_obj.dest_saida.endereco_padrao.numero
+                else:
+                    nfe.infNFe.dest.enderDest.nro.valor = 'SN'
+                # nfe.infNFe.dest.enderDest.nro.valor = nota_obj.dest_saida.endereco_padrao.numero
                 nfe.infNFe.dest.enderDest.xCpl.valor = nota_obj.dest_saida.endereco_padrao.complemento
                 nfe.infNFe.dest.enderDest.xBairro.valor = nota_obj.dest_saida.endereco_padrao.bairro
                 nfe.infNFe.dest.enderDest.cMun.valor = nota_obj.dest_saida.endereco_padrao.cmun
@@ -138,8 +152,8 @@ class ProcessadorNotaFiscal(object):
                 det = Det_400()
                 det.nItem.valor = index
                 det.infAdProd.valor = item.inf_ad_prod
-
-                det.prod.CEST.valor = item.produto.cest
+                if item.produto.cest:
+                    det.prod.CEST.valor = item.produto.cest
                 det.prod.cProd.valor = item.produto.codigo
                 det.prod.cEAN.valor = item.produto.codigo_barras
                 det.prod.xProd.valor = item.produto.descricao
@@ -239,7 +253,10 @@ class ProcessadorNotaFiscal(object):
                     if ipi_obj.cst:
                         det.imposto.IPI.CST.valor = ipi_obj.cst
                         det.imposto.IPI.clEnq.valor = ipi_obj.cl_enq
-                        det.imposto.IPI.CNPJProd.valor = ipi_obj.get_cnpj_prod_apenas_digitos()
+                        if ipi_obj.cnpj_prod:
+                            det.imposto.IPI.CNPJProd.valor = (
+                                ipi_obj.get_cnpj_prod_apenas_digitos()
+                            )
                         det.imposto.IPI.cEnq.valor = ipi_obj.c_enq
 
                         if ipi_obj.tipo_ipi == '1':
@@ -313,6 +330,19 @@ class ProcessadorNotaFiscal(object):
         nfe.infNFe.total.ICMSTot.vOutro.valor = nota_obj.venda.despesas
         nfe.infNFe.total.ICMSTot.vICMSDeson.valor = nota_obj.venda.get_valor_total_attr(
             'vicms_deson')
+        
+        #Campos não atendidos no SIGE
+        nfe.infNFe.total.ICMSTot.vFCPST.valor =0
+        nfe.infNFe.total.ICMSTot.vFCPSTRet.valor =0
+        nfe.infNFe.total.ICMSTot.vIPIDevol.valor =0
+        nfe.infNFe.total.ICMSTot.vFCPUFDest.valor =0
+        nfe.infNFe.total.ICMSTot.vICMSUFDest.valor =0
+        nfe.infNFe.total.ICMSTot.vICMSUFRemet.valor =0
+        nfe.infNFe.total.ICMSTot.vFCP.valor =0
+        nfe.infNFe.total.ICMSTot.vTotTrib.valor =0
+
+
+
         nfe.calcula_total_nfe()
 
         # Transporte
@@ -345,20 +375,38 @@ class ProcessadorNotaFiscal(object):
                 d.nDup.valor = str(pagamento.id)
                 d.dVenc.valor = pagamento.vencimento
                 d.vDup.valor = pagamento.valor_parcela
-
                 nfe.infNFe.cobr.dup.append(d)
 
-        # Pagamento(NFC-e)
-        if nota_obj.mod == '65':
-            nfe.infNFe.pag.tPag.valor = nota_obj.venda.get_forma_pagamento()
-            nfe.infNFe.pag.vPag.valor = nota_obj.venda.valor_total
+        if nota_obj.venda and nota_obj.venda.cond_pagamento:
+            d = DetPag()
+            forma_pgamento = nota_obj.venda.get_forma_pagamento()
+            d.tPag.valor =  forma_pgamento
+            d.tPag.valor = nota_obj.venda.cond_pagamento.forma
+            print(f'FORMA DE PAGAMENTO {forma_pgamento}')
+
+            d.vPag.valor = nota_obj.venda.valor_total
+            nfe.infNFe.pag.detPag.append(d)
+            print(f'APENDADO PEGAEAMENTO: {nfe.infNFe.pag}')
+            print(nfe.infNFe.pag.xml)
+
+            # print(f'APENDADO PEGAEAMENTO: {nfe.infNFe.xml}')
+            # print(nfe.infNFe.xml)
+
+
+
+        # # Pagamento(NFC-e)
+        # if nota_obj.mod == "65":
+        #     nfe.infNFe.pag.tPag.valor = nota_obj.venda.get_forma_pagamento()
+        #     nfe.infNFe.pag.vPag.valor = nota_obj.venda.valor_total
 
         # Informacoes adicionais
         nfe.infNFe.infAdic.infAdFisco.valor = nota_obj.inf_ad_fisco
         nfe.infNFe.infAdic.infCpl.valor = nota_obj.inf_cpl
-
+        print(f'APENDADO PEGAEAMENTO: {nfe.infNFe.pag}')
+        print(nfe.infNFe.pag.xml)
         nfe.gera_nova_chave()
-
+        print(f'APENDADO PEGAEAMENTO-posnova chave: {nfe.infNFe.pag}')
+        print(nfe.infNFe.pag.xml)
         return nfe
 
     def importar_xml(self, request):
@@ -372,8 +420,10 @@ class ProcessadorNotaFiscal(object):
         nota_saida = NotaFiscalSaida()
         venda = PedidoVenda()
 
-        try: xml_nfe = request.FILES['arquivo_xml'].read().decode("utf-8")
-        except: xml_nfe = request.FILES['arquivo_xml'].read().decode("cp1252")
+        try:
+            xml_nfe = request.FILES["arquivo_xml"].read().decode("utf-8")
+        except:
+            xml_nfe = request.FILES["arquivo_xml"].read().decode("cp1252")
 
         nfe.xml = xml_nfe
 
@@ -609,8 +659,7 @@ class ProcessadorNotaFiscal(object):
                 produto.origem = str(det.imposto.ICMS.orig.valor)
                 produto.controlar_estoque = False
                 if det.prod.EXTIPI.valor:
-                    produto.ncm = str(det.prod.NCM.valor) + \
-                        str(det.prod.EXTIPI.valor)
+                    produto.ncm = str(det.prod.NCM.valor) + str(det.prod.EXTIPI.valor)
                 else:
                     produto.ncm = str(det.prod.NCM.valor)
                 produto.venda = det.prod.vUnCom.valor
@@ -765,9 +814,9 @@ class ProcessadorNotaFiscal(object):
             itens_venda.vipi = det.imposto.IPI.vIPI.valor
 
             if det.imposto.ICMSUFDest.xml:
-                itens_venda.vicmsufdest = det.imposto.vICMSUFDest.valor
-                itens_venda.vicmsufremet = det.imposto.vICMSUFRemet.valor
-                itens_venda.vfcp = det.imposto.vFCPUFDest.valor
+                itens_venda.vicmsufdest = det.imposto.ICMSUFDest.vICMSUFDest.valor
+                itens_venda.vicmsufremet = det.imposto.ICMSUFDest.vICMSUFRemet.valor
+                itens_venda.vfcp = det.imposto.ICMSUFDest.vFCPUFDest.valor
 
             itens_venda.vicms_deson = det.imposto.ICMS.vICMSDeson.valor
             itens_venda.p_icms = det.imposto.ICMS.pICMS.valor
@@ -794,6 +843,7 @@ class ProcessadorNotaFiscal(object):
 
         venda.save()
         nota_saida.venda = venda
+        print(f'nota saida: {nfe.xml}')
         nota_saida.save()
 
         # Informacoes de cobranca
@@ -814,6 +864,10 @@ class ProcessadorNotaFiscal(object):
         except: xml_nfe = request.FILES['arquivo_xml'].read().decode("cp1252")
 
         nfe.xml = xml_nfe
+        try:
+            nfe.arquivo_proc = request.FILES["arquivo_xml"]
+        except:
+            pass
 
         nota_entrada.n_nf_entrada = str(nfe.infNFe.ide.nNF.valor)
         nota_entrada.chave = str(nfe.infNFe.Id.valor[-44:])
@@ -946,8 +1000,10 @@ class ProcessadorNotaFiscal(object):
 
                 nota_entrada.dest_entrada = empresa
 
-        # Compra
+
         compra.mod_frete = str(nfe.infNFe.transp.modFrete.valor)
+
+        # Compra
         compra.valor_total = nfe.infNFe.total.ICMSTot.vNF.valor
         compra.tipo_desconto = u'0'
         compra.desconto = nfe.infNFe.total.ICMSTot.vDesc.valor
@@ -1173,12 +1229,14 @@ class ProcessadorNotaFiscal(object):
     def validar_nota(self, nota_obj):
         ErrosValidacaoNotaFiscal.objects.filter(nfe=nota_obj).delete()
         self.nova_nfe = nf_e()
-
+        print(f'Validando nota {self.nova_nfe}...')
         self.verificar_configuracao_nfe(nota_obj)
         if not self.info_certificado:
             return self.salvar_mensagem(message='Emissão de NF-e não configurada.', erro=True)
 
         nfe = self.montar_nota(nota_obj)
+        print(f'APENDADO PEGAEAMENTO pos nota montada: {nfe.infNFe.ide.cUF.valor}')
+        print(nfe.infNFe.pag.xml)
 
         if not nota_obj.estado:
             e = ErrosValidacaoNotaFiscal(nfe=nota_obj)
@@ -1187,8 +1245,16 @@ class ProcessadorNotaFiscal(object):
             e.save()
             return self.salvar_mensagem(message=e.descricao, erro=True)
         else:
+            # print(f'XML ANTES DE GERAR: {nfe.xml}')
+            # nfe.auto_preencher_campos(ambiente=int(nota_obj.tp_amb), estado=nota_obj.estado)
             processo = self.nova_nfe.gerar_xml(xml_nfe=nfe.xml, cert=self.info_certificado['cert'], key=self.info_certificado['key'],
                                                versao=nota_obj.versao, ambiente=int(nota_obj.tp_amb), estado=nota_obj.estado, consumidor=nota_obj.consumidor, caminho=MEDIA_ROOT)
+
+            print(f'processo: {processo}')
+            print(f'nfexlm: ' )
+            print('\n\n')
+            # print(f'nfexlm: {nfe.xml}')
+            print('\n\n')
         temp_list = []
         for err in processo.envio.erros:
             e = ErrosValidacaoNotaFiscal(nfe=nota_obj)
@@ -1378,10 +1444,11 @@ class ProcessadorNotaFiscal(object):
                 nota_obj.save()
 
             except SSLError as err:
-                print(err)
                 e = RespostaSefazNotaFiscal(nfe=nota_obj)
-                e.tipo = u'0'
-                e.descricao = 'Erro de ssl autenticação, verifique se seu certificado é válido.'
+                e.tipo = "0"
+                e.descricao = (
+                    "Erro de autenticação, verifique se seu certificado é válido."
+                )
                 e.save()
                 self.salvar_mensagem(message=e.descricao, erro=True)
                 raise err
